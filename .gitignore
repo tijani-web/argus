@@ -1,0 +1,15 @@
+target/
+*.log
+api-error
+logs.txt
+logs2.txt
+logs3.txt
+hs_err_pid*.log
+replay_pid*.log
+GeoLite2-City.mmdb
+.idea/
+*.iml
+.vscode/
+node_modules/
+dist/
+build/

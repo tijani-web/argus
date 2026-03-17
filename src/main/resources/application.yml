@@ -1,0 +1,109 @@
+spring:
+  application:
+    name: ingestion-api
+    
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      
+  cloud:
+    function:
+      definition: processEvents
+    stream:
+      kafka:
+        streams:
+          binder:
+            brokers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
+            configuration:
+              commit.interval.ms: 1000
+              default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+              default.value.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+              # processing.guarantee: exactly_once_v2  # PRODUCTION GRADE
+              # replication.factor: 3  # For production with multiple brokers
+              # min.insync.replicas: 2  # For production durability
+              processing.guarantee: at_least_once  # For development with single broker
+              replication.factor: 1  # For development with single broker
+              min.insync.replicas: 1  # For development with single broker
+          bindings:
+            processEvents-in-0:
+              consumer:
+                key-serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+                value-serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+                materialized-as: null
+                application-id: streamforge-analytics-brain-v1  # Version your apps
+      bindings:
+        processEvents-in-0:
+          destination: raw-events
+          group: ingestion-stream-processor  # Consumer group
+          content-type: application/json
+          consumer:
+            use-native-decoding: true
+            max-attempts: 3  # Retry configuration
+            backoff-initial-interval: 1000
+            backoff-max-interval: 10000
+            backoff-multiplier: 2.0
+        processEvents-out-0:
+          destination: service-alerts
+          content-type: application/json
+          producer:
+            use-native-encoding: true
+            sync: false  # Async for performance
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:redis}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+
+  datasource:
+    url: jdbc:postgresql://${SPRING_DATASOURCE_HOST:timescaledb}:${SPRING_DATASOURCE_PORT:5432}/postgres
+    username: postgres
+    password: ${SPRING_DATASOURCE_PASSWORD:holdontohope}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 5000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+server:
+  port: ${SERVER_PORT:8100}
+  compression:
+    enabled: true
+    mime-types: application/json
+
+streamforge:
+  api:
+    keys: ${STREAMFORGE_API_KEYS:test-key-1,test-key-2}
+    rate-limit: 1000  # Add rate limiting for production
+
+geoip:
+  database:
+    path: ${GEOIP_DATABASE_PATH:/app/geoip/GeoLite2-City.mmdb}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus,info
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.streamforge: INFO
+    org.apache.kafka: WARN  # Reduce noise in production
+    org.springframework.kafka: INFO
