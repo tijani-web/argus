@@ -3,6 +3,7 @@ package com.streamforge.ingestion.security;
 import com.streamforge.ingestion.repository.ApiKeyRepository;
 import com.streamforge.ingestion.service.RateLimitService;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
@@ -39,6 +40,11 @@ public class ApiKeyAuthFilter implements WebFilter {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        // Allow CORS preflight requests through without authentication
+        if (exchange.getRequest().getMethod() == HttpMethod.OPTIONS) {
+            return chain.filter(exchange);
+        }
+
         String path = exchange.getRequest().getPath().value();
 
         // Allow actuator endpoints through without an API key
