@@ -124,12 +124,12 @@ This starts **six containers** on the `argus-net` bridge network:
 
 ### 2. Send your first event
 
-All `/api/**` endpoints require `X-API-Key`. Default keys are `test-key-1` and `test-key-2`.
+All `/api/**` ingestion events and dashboard queries require `X-API-Key`. These keys are dynamically provisioned in the database when you create a Project via the frontend dashboard.
 
 ```bash
 curl -s -X POST http://localhost:8100/api/events \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: test-key-1" \
+  -H "X-API-Key: argus_live_YOUR_KEY_HERE" \
   -d '{
     "eventId": "550e8400-e29b-41d4-a716-446655440000",
     "eventType": "page_view",
@@ -149,7 +149,7 @@ curl -s -X POST http://localhost:8100/api/events \
 **Live counters (Redis):**
 ```bash
 curl -s http://localhost:8100/api/v1/dashboard/counters \
-  -H "X-API-Key: test-key-1" | jq
+  -H "X-API-Key: argus_live_YOUR_KEY_HERE" | jq
 ```
 ```json
 {
@@ -162,7 +162,7 @@ curl -s http://localhost:8100/api/v1/dashboard/counters \
 **Historical time-series (TimescaleDB):**
 ```bash
 curl -s http://localhost:8100/api/v1/dashboard/series \
-  -H "X-API-Key: test-key-1" | jq
+  -H "X-API-Key: argus_live_YOUR_KEY_HERE" | jq
 ```
 ```json
 [
@@ -187,7 +187,7 @@ Ingests a single event. Validates, GeoIP-enriches, and publishes to Kafka.
 
 | Header | Required | Description |
 |---|---|---|
-| `X-API-Key` | ✅ | Must match a key in `STREAMFORGE_API_KEYS` |
+| `X-API-Key` | ✅ | Must match a valid and active Project API key from the database |
 | `Content-Type` | ✅ | `application/json` |
 
 **Valid `eventType` values:** `page_view` `click` `api_call` `error` `signup` `purchase` `service_health`
@@ -243,7 +243,7 @@ Audit log of raw event payloads from the `raw_events` table.
 | `SPRING_DATA_REDIS_PORT` | `6379` | Redis port |
 | `SPRING_DATASOURCE_HOST` | `timescaledb` | TimescaleDB hostname |
 | `SPRING_DATASOURCE_PASSWORD` | `holdontohope` | PostgreSQL password |
-| `STREAMFORGE_API_KEYS` | `test-key-1,test-key-2` | Comma-separated valid API keys |
+| `SPRING_SECURITY_USER_NAME` | `admin` | Default basic auth (optional) |
 | `GEOIP_DATABASE_PATH` | `/app/geoip/GeoLite2-City.mmdb` | Path to mmdb file |
 
 ---
