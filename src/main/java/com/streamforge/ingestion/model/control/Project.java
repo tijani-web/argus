@@ -2,6 +2,8 @@ package com.streamforge.ingestion.model.control;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +35,7 @@ public class Project {
     @Column(name = "slack_webhook_url")
     private String slackWebhookUrl;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "alert_config", columnDefinition = "jsonb")
     private String alertConfig = "{\"alertOnErrors\": true, \"alertOnTypes\": []}";
 
