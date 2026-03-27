@@ -64,7 +64,18 @@ logs2.txt
 logs3.txt
 GeoLite2-City.mmdb
 
-# Node/Frontend (if applicable in this dir)
 node_modules/
 dist/
 build/
+
+# Deployment & secrets
+renew.sh
+*.tar.gz
+*.log
+test.ps1
+test.sh
+compile_err*.txt
+docker-build*.log
+api-error.log
+raw_message.json
+vm_ip.txt
