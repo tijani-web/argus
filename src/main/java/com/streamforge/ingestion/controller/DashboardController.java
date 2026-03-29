@@ -36,8 +36,8 @@ public class DashboardController {
     }
 
     @GetMapping("/counters")
-    public Mono<DashboardStats> getCounters(@RequestParam(required = false) UUID projectId) {
-        String prefix = (projectId != null) ? "stats:project:" + projectId + ":" : "stats:global:";
+    public Mono<DashboardStats> getCounters(@RequestParam UUID projectId) {
+        String prefix = "stats:project:" + projectId + ":";
 
         return Mono.zip(
                 redisTemplate.opsForValue().get(prefix + "events:total")
@@ -57,29 +57,18 @@ public class DashboardController {
     }
 
     @GetMapping("/series")
-    public Mono<List<Map<String, Object>>> getSeries(@RequestParam(required = false) UUID projectId) {
+    public Mono<List<Map<String, Object>>> getSeries(@RequestParam UUID projectId) {
         return Mono.fromCallable(() -> {
-            if (projectId != null) {
-                String sql = "SELECT time, SUM(event_count) AS \"eventCount\" FROM events_aggregation WHERE project_id = ? GROUP BY time ORDER BY time ASC";
-                return jdbcTemplate.queryForList(sql, projectId);
-            } else {
-                // Aggregate across all projects for global view
-                String sql = "SELECT time, SUM(event_count) as \"eventCount\" FROM events_aggregation GROUP BY time ORDER BY time ASC";
-                return jdbcTemplate.queryForList(sql);
-            }
+            String sql = "SELECT time, SUM(event_count) AS \"eventCount\" FROM events_aggregation WHERE project_id = ? GROUP BY time ORDER BY time ASC";
+            return jdbcTemplate.queryForList(sql, projectId);
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
     @GetMapping("/events")
-    public Mono<List<Map<String, Object>>> getRawEvents(@RequestParam(required = false) UUID projectId, @RequestParam(defaultValue = "50") int limit) {
+    public Mono<List<Map<String, Object>>> getRawEvents(@RequestParam UUID projectId, @RequestParam(defaultValue = "50") int limit) {
         return Mono.fromCallable(() -> {
-            if (projectId != null) {
-                String sql = "SELECT time, event_type, payload FROM raw_events WHERE project_id = ? ORDER BY time DESC LIMIT ?";
-                return jdbcTemplate.queryForList(sql, projectId, limit);
-            } else {
-                String sql = "SELECT time, event_type, payload FROM raw_events ORDER BY time DESC LIMIT ?";
-                return jdbcTemplate.queryForList(sql, limit);
-            }
+            String sql = "SELECT time, event_type, payload FROM raw_events WHERE project_id = ? ORDER BY time DESC LIMIT ?";
+            return jdbcTemplate.queryForList(sql, projectId, limit);
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
