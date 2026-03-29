@@ -85,6 +85,7 @@ spring:
 
 server:
   port: ${SERVER_PORT:8100}
+  forward-headers-strategy: native
   compression:
     enabled: true
     mime-types: application/json

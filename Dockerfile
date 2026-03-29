@@ -14,8 +14,12 @@ WORKDIR /app
 # Create a non-root user for security
 RUN groupadd -r spring && useradd -r -g spring spring
 
-# Create GeoIP directory (optional file - app will still work without it)
-RUN mkdir -p /app/geoip && chown -R spring:spring /app/geoip
+# Create GeoIP directory and download database
+RUN mkdir -p /app/geoip && \
+    curl -L -f "https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-City.mmdb" -o /app/geoip/GeoLite2-City.mmdb || \
+    (echo "Falling back to different GeoIP source..." && \
+     curl -L -f "https://raw.githubusercontent.com/GitSquared/node-geolite2-redist/master/redist/GeoLite2-City.mmdb" -o /app/geoip/GeoLite2-City.mmdb) && \
+    chown -R spring:spring /app/geoip
 
 # Copy the JAR from the build stage
 COPY --from=build /build/target/ingestion-api-0.0.1-SNAPSHOT.jar app.jar
