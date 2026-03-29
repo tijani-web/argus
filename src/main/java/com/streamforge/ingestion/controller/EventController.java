@@ -26,8 +26,8 @@ public class EventController {
     @PostMapping
     public Mono<ResponseEntity<Void>> ingestEvent(@Valid @RequestBody StreamEvent event, ServerWebExchange exchange) {
         String clientIp = getClientIp(exchange);
-        org.slf4j.LoggerFactory.getLogger(EventController.class).info("Ingesting event for project {}. Client IP: {}", projectId, clientIp);
         java.util.UUID projectId = exchange.getAttribute("projectId");
+        org.slf4j.LoggerFactory.getLogger(EventController.class).info("Ingesting event for project {}. Client IP: {}", projectId, clientIp);
 
         StreamEvent scopedEvent = new StreamEvent(
                 event.eventId(),
