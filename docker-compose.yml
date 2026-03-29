@@ -100,7 +100,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - certbot-www:/var/www/certbot:ro
-      - ./nginx/certbot-etc:/etc/letsencrypt:ro
+      - certbot-certs:/etc/letsencrypt:ro
     depends_on:
       - ingestion-api
 
