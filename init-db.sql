@@ -29,15 +29,16 @@ CREATE TABLE IF NOT EXISTS events_aggregation (
     project_id UUID NOT NULL,
     event_type VARCHAR(50) NOT NULL,
     event_count BIGINT NOT NULL,
-    UNIQUE (time, project_id, event_type)
+    PRIMARY KEY (time, project_id, event_type)
 );
 
 CREATE TABLE IF NOT EXISTS raw_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID NOT NULL DEFAULT uuid_generate_v4(),
     time TIMESTAMPTZ NOT NULL,
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     event_type VARCHAR(50) NOT NULL,
-    payload JSONB NOT NULL
+    payload JSONB NOT NULL,
+    PRIMARY KEY (id, time)
 );
 
 -- Convert to hypertables
