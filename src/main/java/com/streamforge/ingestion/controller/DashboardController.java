@@ -77,31 +77,79 @@ public class DashboardController {
     }
 
     @GetMapping("/series")
-    public Mono<List<Map<String, Object>>> getSeries(@RequestParam UUID userId, @RequestParam(required = false) UUID projectId) {
+    public Mono<List<Map<String, Object>>> getSeries(
+            @RequestParam UUID userId,
+            @RequestParam(required = false) UUID projectId,
+            @RequestParam(required = false) String eventType) {
         List<UUID> projectIds = getAuthorizedProjectIds(userId, projectId);
         if (projectIds.isEmpty()) return Mono.just(List.of());
 
         return Mono.fromCallable(() -> {
             String inSql = projectIds.stream().map(id -> "?").collect(Collectors.joining(","));
-            String sql = "SELECT time, SUM(event_count) AS \"eventCount\" FROM events_aggregation WHERE project_id IN (" + inSql + ") GROUP BY time ORDER BY time ASC";
-            return jdbcTemplate.queryForList(sql, projectIds.toArray());
+            String sql = "SELECT time, SUM(event_count) AS \"eventCount\" FROM events_aggregation WHERE project_id IN (" + inSql + ")";
+            
+            Object[] params;
+            if (eventType != null && !eventType.isBlank()) {
+                sql += " AND event_type = ?";
+                sql += " GROUP BY time ORDER BY time ASC";
+                params = new Object[projectIds.size() + 1];
+                for (int i = 0; i < projectIds.size(); i++) params[i] = projectIds.get(i);
+                params[projectIds.size()] = eventType;
+            } else {
+                sql += " GROUP BY time ORDER BY time ASC";
+                params = projectIds.toArray();
+            }
+            
+            return jdbcTemplate.queryForList(sql, params);
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
     @GetMapping("/events")
-    public Mono<List<Map<String, Object>>> getRawEvents(@RequestParam UUID userId, @RequestParam(required = false) UUID projectId, @RequestParam(defaultValue = "50") int limit) {
+    public Mono<List<Map<String, Object>>> getRawEvents(
+            @RequestParam UUID userId,
+            @RequestParam(required = false) UUID projectId,
+            @RequestParam(required = false) String eventType,
+            @RequestParam(required = false) String country,
+            @RequestParam(defaultValue = "50") int limit) {
+        
+        List<UUID> projectIds = getAuthorizedProjectIds(userId, projectId);
+        if (projectIds.isEmpty()) return Mono.just(List.of());
+
+        return Mono.fromCallable(() -> {
+            StringBuilder sql = new StringBuilder("SELECT time, event_type, payload FROM raw_events WHERE project_id IN (");
+            sql.append(projectIds.stream().map(id -> "?").collect(Collectors.joining(",")));
+            sql.append(")");
+
+            java.util.List<Object> params = new java.util.ArrayList<>(projectIds);
+
+            if (eventType != null && !eventType.isBlank()) {
+                sql.append(" AND event_type = ?");
+                params.add(eventType);
+            }
+            if (country != null && !country.isBlank()) {
+                sql.append(" AND payload->>'country' = ?");
+                params.add(country);
+            }
+
+            sql.append(" ORDER BY time DESC LIMIT ?");
+            params.add(limit);
+            
+            return jdbcTemplate.queryForList(sql.toString(), params.toArray());
+        }).subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @GetMapping("/countries")
+    public Mono<List<Map<String, Object>>> getCountries(@RequestParam UUID userId, @RequestParam(required = false) UUID projectId) {
         List<UUID> projectIds = getAuthorizedProjectIds(userId, projectId);
         if (projectIds.isEmpty()) return Mono.just(List.of());
 
         return Mono.fromCallable(() -> {
             String inSql = projectIds.stream().map(id -> "?").collect(Collectors.joining(","));
-            String sql = "SELECT time, event_type, payload FROM raw_events WHERE project_id IN (" + inSql + ") ORDER BY time DESC LIMIT ?";
-            
-            Object[] params = new Object[projectIds.size() + 1];
-            for (int i = 0; i < projectIds.size(); i++) params[i] = projectIds.get(i);
-            params[projectIds.size()] = limit;
-            
-            return jdbcTemplate.queryForList(sql, params);
+            String sql = "SELECT payload->>'country' AS country, COUNT(*) AS count FROM raw_events " +
+                         "WHERE project_id IN (" + inSql + ") " +
+                         "AND payload->>'country' IS NOT NULL " +
+                         "GROUP BY payload->>'country' ORDER BY count DESC LIMIT 10";
+            return jdbcTemplate.queryForList(sql, projectIds.toArray());
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
