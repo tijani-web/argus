@@ -80,7 +80,8 @@ public class DashboardController {
     public Mono<List<Map<String, Object>>> getSeries(
             @RequestParam UUID userId,
             @RequestParam(required = false) UUID projectId,
-            @RequestParam(required = false) String eventType) {
+            @RequestParam(required = false) String eventType,
+            @RequestParam(defaultValue = "500") int limit) {
         List<UUID> projectIds = getAuthorizedProjectIds(userId, projectId);
         if (projectIds.isEmpty()) return Mono.just(List.of());
 
@@ -88,19 +89,24 @@ public class DashboardController {
             String inSql = projectIds.stream().map(id -> "?").collect(Collectors.joining(","));
             String sql = "SELECT time, SUM(event_count) AS \"eventCount\" FROM events_aggregation WHERE project_id IN (" + inSql + ")";
             
-            Object[] params;
+            java.util.List<Object> params = new java.util.ArrayList<>(projectIds);
+
             if (eventType != null && !eventType.isBlank()) {
                 sql += " AND event_type = ?";
-                sql += " GROUP BY time ORDER BY time ASC";
-                params = new Object[projectIds.size() + 1];
-                for (int i = 0; i < projectIds.size(); i++) params[i] = projectIds.get(i);
-                params[projectIds.size()] = eventType;
-            } else {
-                sql += " GROUP BY time ORDER BY time ASC";
-                params = projectIds.toArray();
+                params.add(eventType);
             }
             
-            return jdbcTemplate.queryForList(sql, params);
+            sql += " GROUP BY time ORDER BY time ASC";
+            
+            // To get the LATEST N buckets but keep them in ASC order for Chart.js,
+            // we use a subquery or just order DESC then reverse.
+            // But since time is chronological, we can just use a large enough window.
+            // However, to truly get 'morning' data, we might need a larger limit or time range.
+            
+            String finalSql = "SELECT * FROM (" + sql + ") AS sub ORDER BY time ASC LIMIT ?";
+            params.add(limit);
+            
+            return jdbcTemplate.queryForList(finalSql, params.toArray());
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
