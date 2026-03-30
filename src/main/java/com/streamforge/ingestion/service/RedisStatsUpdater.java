@@ -38,8 +38,16 @@ public class RedisStatsUpdater {
 
     public void incrementErrorCount(java.util.UUID projectId) {
         String projectPrefix = "stats:project:" + projectId + ":";
+        String globalPrefix = "stats:global:";
+
+        // Project-scoped
         redisTemplate.opsForValue().increment(projectPrefix + "events:errors")
                 .doOnError(e -> log.error("Failed to increment project error events in Redis", e))
+                .subscribe();
+
+        // Global aggregate
+        redisTemplate.opsForValue().increment(globalPrefix + "events:errors")
+                .doOnError(e -> log.error("Failed to increment global error events in Redis", e))
                 .subscribe();
     }
 }
