@@ -46,5 +46,5 @@ SELECT create_hypertable('events_aggregation', 'time', if_not_exists => TRUE);
 SELECT create_hypertable('raw_events', 'time', if_not_exists => TRUE);
 
 -- Retention policies
-SELECT add_retention_policy('events_aggregation', INTERVAL '30 days', if_not_exists => TRUE);
-SELECT add_retention_policy('raw_events', INTERVAL '7 days', if_not_exists => TRUE);
+-- SELECT add_retention_policy('events_aggregation', INTERVAL '30 days', if_not_exists => TRUE);
+-- SELECT add_retention_policy('raw_events', INTERVAL '7 days', if_not_exists => TRUE);
